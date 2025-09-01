@@ -191,15 +191,22 @@ function escapeRegExp(string) {
 
 
 app.get('/search', async (req, res) => {
-    const q = req.query.q;
-    const regex = new RegExp(q, 'i'); // case-insensitive
-    const users = await User.find({
-        $or: [
-            { codeNo: regex },
-            { adhaarNo: regex }
-        ]
-    });
-    res.json(users);
+    try {
+        const q = req.query.q ? req.query.q.trim() : '';
+        if (!q) return res.json([]); // No query provided
+
+        const users = await User.find({
+            $or: [
+                { codeNo: new RegExp(`^${escapeRegExp(q)}$`, 'i') },  // exact match, case-insensitive
+                { adhaarNo: q.replace(/\s+/g, '') }  // Aadhaar exact match
+            ]
+        });
+
+        res.json(users);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Error searching user' });
+    }
 });
 
 // get all users
